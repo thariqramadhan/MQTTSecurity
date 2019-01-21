@@ -16,8 +16,8 @@ const int N = 16; // 16 max length
 AES128 cipher;
 int nData = 0;
 byte key[32] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F}; // Key
-byte text[2*N], Decrypt[16];
-char message[2*N];
+byte text[N], Decrypt[16];
+char message[2 * N];
 
 // Declaration MQTT
 WiFiClient espClient;
@@ -34,18 +34,19 @@ int totError = 0;
 // Allocate RAM
 SRAM sram(4, SRAM_1024);
 
+// Declaration time
+long int timeSend = 0;
+long int timeReceive;
 void setup() {
   Serial.begin(115200);
   Serial.setTimeout(2000); // Set waktu time out
   pinMode(LED_BUILTIN, OUTPUT); // Memanggil LED
   ConnectWiFi(); // I unite connect to WiFi and MQTT Server
 
-  client.subscribe("ESP/text");
-
   sram.begin();
   sram.seek(1);
 
-  Serial.println("No Data\tNo Data Receive\tHumidty(%)\tTemperature(*C)\tTotal Error");
+  Serial.println("No Data\tNo Data Receive\tHumidty(%)\tTemperature(*C)\tTotal Error\tDelay(milis)");
 }
 
 void loop() {
@@ -64,10 +65,11 @@ void ConnectWiFi() {
 
   // Connect ke MQTT
   client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
 
   while (!client.connected()) {
     Serial.println("Connecting to MQTT...");
-    if (client.connect("ESP8266Client1")) {
+    if (client.connect("ESP8266Client2" )) {
       Serial.println("connected");
     } else {
       Serial.print("failed with state ");
@@ -75,15 +77,30 @@ void ConnectWiFi() {
       delay(2000);
     }
   }
-  client.subscribe("ESP/led");
+
+  client.subscribe("ESP/text");
 }
+
 
 void callback(char* topic, byte* payload, unsigned int length) {
   sram.seek(1);
   for (int i = 0; i < length; i++) {
     message[i] = (char)payload[i];
   }
-
+  timeReceive = millis();
+  // Calculate delay
+  int j = 2 * N + 1;
+  int i = 0;
+  int power;
+  char buf[8];
+  while (message[j] != '-') {
+    buf[i] = message[j];
+    i++;
+    j++;
+  }
+  timeSend =atoi(buf);
+  int dela = timeReceive - timeSend;
+  
   // Setting Key
   crypto_feed_watchdog();
   cipher.setKey(key, cipher.keySize());
@@ -92,7 +109,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   byte dataRec[N];
   byte temp;
-  for (int i = 0; i < 2*N; i++) {
+  for (int i = 0; i < 2 * N; i++) {
     switch (message[i]) {
       case '0' :
         temp = 0x00;
@@ -184,8 +201,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.print("\t\t");
   Serial.print(totError);
+  Serial.print("\t\t");
+  Serial.println(dela);
+
   Serial.println();
-  memset(payload, NULL, 2*N);
+  memset(payload, NULL, 2 * N);
 
   sram.seek(1);
 }

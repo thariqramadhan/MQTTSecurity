@@ -30,6 +30,8 @@ const char* password =  "hahapanggakjelashah"; // Your WiFi password
 const char* mqttServer = "192.168.43.4"; // Your MQTT server
 const int mqttPort = 1883; // Your MQTT port
 
+// Declaration for Time(Assumtion on in same time)
+unsigned long timeSend;
 void setup() {
   Serial.begin(115200); // For using serial monitor
   Serial.setTimeout(2000); // Setting time out
@@ -68,7 +70,7 @@ void loop() {
   // Change byte array[N] to String in HEX format
   byte tempByte;
   char tempC;
-  char message[N];
+  char message[2 * N + 10];
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < 2; j++) {
       if ((j % 2) == 0) {
@@ -130,12 +132,28 @@ void loop() {
     }
   }
 
-  memset(message + 2 * N, NULL, N); // Clear array
+  // memset(message + 2 * N, NULL, N); // Clear array
   Serial.print("String message : ");
-  Serial.println(message);
+
 
   // Send data
-  memset(message + 2 * N, NULL, N); // Clear array
+  memset(message + 2 * N + 9, NULL, N); // Clear array
+
+  // Add time in the end
+  message[2 * N] = ':';
+  timeSend = millis();
+  String strTimeSend = String(timeSend);
+  int lengthTimeSend = strTimeSend.length();
+  char buf[lengthTimeSend];
+  strTimeSend.toCharArray(buf, lengthTimeSend + 1);
+  for (int i = 0; i < lengthTimeSend; i++) {
+    message[2 * N + 1 + i] = buf[i];
+  }
+  for (int i = 0; i < 9 - lengthTimeSend; i++) {
+    message[2 * N + 1 + lengthTimeSend + i] = '-';
+  }
+
+  Serial.println(message);
   client.publish("ESP/text", message);
   client.loop();
   Serial.println();
@@ -272,7 +290,7 @@ String ReadDHT() {
   dataSend += ":";
   // Mengecheck bila gagal terbaca
   if (isnan(h) || isnan(t)) {
-    dataSend += "--:--;";
+    dataSend += "--:--:";
   } else {
     // Memprint data ke serial monitor
     dataSend += String(h, 2);
