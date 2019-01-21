@@ -9,5 +9,3 @@ For DHT https://github.com/adafruit/DHT-sensor-library
 For MQTT https://github.com/knolleary/pubsubclient
 
 For AES https://github.com/rweather/arduinolibs
-
-(This project is still in editing)
