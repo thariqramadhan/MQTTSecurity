@@ -4,7 +4,7 @@ This project is an application of IoT (Internet of Things) by sending temperatur
 
 Library used:
 
-For DHT22 https://github.com/adafruit/DHT-sensor-library
+For DHT https://github.com/adafruit/DHT-sensor-library
 
 For MQTT https://github.com/knolleary/pubsubclient
 
