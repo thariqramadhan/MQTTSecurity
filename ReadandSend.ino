@@ -19,7 +19,8 @@ DHT dht(DHTPIN, DHTTYPE); // Declaration DHT
 AES128 cipher;
 int nData = 0;
 byte key[32] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F}; // Key
-byte text[20], Encrypt[16], Decrypt[16];
+const int N = 16; // Max length data
+byte text[N], Encrypt[N], Decrypt[N];
 
 // Declaration MQTT
 WiFiClient espClient;
@@ -44,9 +45,9 @@ void loop() {
   // Cryptography AES
 
   // Change String to byte array
-  byte buff[20];
-  dataDHT.getBytes(buff, 21);
-  for (int i = 0; i < 20; i++) {
+  byte buff[N];
+  dataDHT.getBytes(buff, N + 1);
+  for (int i = 0; i < N; i++) {
     text[i] = buff [i];
   }
 
@@ -64,11 +65,11 @@ void loop() {
   }
   Serial.println();
 
-  // Change byte array[20] to String in HEX format
+  // Change byte array[N] to String in HEX format
   byte tempByte;
   char tempC;
-  char message[32];
-  for (int i = 0; i < 20; i++) {
+  char message[N];
+  for (int i = 0; i < N; i++) {
     for (int j = 0; j < 2; j++) {
       if ((j % 2) == 0) {
         tempByte = Encrypt[i] >> 4;
@@ -129,17 +130,105 @@ void loop() {
     }
   }
 
-  memset(message + 32, NULL, 16); // Clear array
+  memset(message + 2 * N, NULL, N); // Clear array
   Serial.print("String message : ");
   Serial.println(message);
 
-
   // Send data
-  memset(message + 32, NULL, 16); // Clear array
+  memset(message + 2 * N, NULL, N); // Clear array
   client.publish("ESP/text", message);
   client.loop();
-
   Serial.println();
+
+  // If you want to encrypt the message
+  /*
+    // Change string in HEX format to byte char[16]
+    byte dataRec[N];
+    byte temp;
+
+    for (int i = 0; i < 2 * N; i++) {
+    switch (message[i]) {
+      case '0' :
+        temp = 0x00;
+        break;
+      case '1' :
+        temp = 0x01;
+        break;
+      case '2' :
+        temp = 0x02;
+        break;
+      case '3' :
+        temp = 0x03;
+        break;
+      case '4' :
+        temp = 0x04;
+        break;
+      case '5' :
+        temp = 0x05;
+        break;
+      case '6' :
+        temp = 0x06;
+        break;
+      case '7' :
+        temp = 0x07;
+        break;
+      case '8' :
+        temp = 0x08;
+        break;
+      case '9' :
+        temp = 0x09;
+        break;
+      case 'A' :
+        temp = 0x0A;
+        break;
+      case 'B' :
+        temp = 0x0B;
+        break;
+      case 'C' :
+        temp = 0x0C;
+        break;
+      case 'D' :
+        temp = 0x0D;
+        break;
+      case 'E' :
+        temp = 0x0E;
+        break;
+      case 'F' :
+        temp = 0x0F;
+        break;
+    }
+    if ((i % 2) == 0) {
+      dataRec[i / 2] = temp;
+    } else {
+      dataRec[(i - 1) / 2] = ( dataRec[(i - 1) / 2] << 4) ^ temp;
+    }
+    }
+
+    Serial.print("Data Rec(int) : ");
+    for (int i = 0; i < N; i++) {
+    Serial.print(dataRec[i]);
+    Serial.print(" ");
+    }
+    Serial.println();
+
+    // Dekripsi
+    cipher.decryptBlock(Decrypt, dataRec);
+
+    Serial.print("Text Decrypt(int) : ");
+    for (int i = 0; i < N; i++) {
+    Serial.print(Decrypt[i]);
+    Serial.print(" ");
+    }
+    Serial.println();
+
+    // Print decryption data
+    Serial.print("Decrypt : ");
+    char messageR[N];
+    for (int i = 0; i < N; i++) {
+    messageR[i] = char(Decrypt[i]);
+    }
+    Serial.println(messageR);
+  */
 
   // Read data every 5 second
   delay(1000);
@@ -173,7 +262,6 @@ void ConnectWiFi() {
       delay(2000);
     }
   }
-  client.subscribe("ESP/led");
 }
 
 String ReadDHT() {
@@ -184,7 +272,7 @@ String ReadDHT() {
   dataSend += ":";
   // Mengecheck bila gagal terbaca
   if (isnan(h) || isnan(t)) {
-    dataSend += "--:--;;";
+    dataSend += "--:--;";
   } else {
     // Memprint data ke serial monitor
     dataSend += String(h, 2);
