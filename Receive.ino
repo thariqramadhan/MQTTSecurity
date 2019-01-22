@@ -30,6 +30,7 @@ const int mqttPort = 1883; // Your MQTT port
 // Variable to calculate error
 int nDataR = 0;
 int totError = 0;
+int leng;
 
 // Allocate RAM
 SRAM sram(4, SRAM_1024);
@@ -86,6 +87,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   sram.seek(1);
   for (int i = 0; i < length; i++) {
     message[i] = (char)payload[i];
+    leng = i;
   }
   timeReceive = millis();
   // Calculate delay
@@ -98,107 +100,118 @@ void callback(char* topic, byte* payload, unsigned int length) {
     i++;
     j++;
   }
-  timeSend =atoi(buf);
+  timeSend = atoi(buf);
   int dela = timeReceive - timeSend;
-  
-  // Setting Key
-  crypto_feed_watchdog();
-  cipher.setKey(key, cipher.keySize());
+  if (leng != 2 * N + 9) {
 
-  // Mengubah string dalam HEX format ke byte char[16]
-
-  byte dataRec[N];
-  byte temp;
-  for (int i = 0; i < 2 * N; i++) {
-    switch (message[i]) {
-      case '0' :
-        temp = 0x00;
-        break;
-      case '1' :
-        temp = 0x01;
-        break;
-      case '2' :
-        temp = 0x02;
-        break;
-      case '3' :
-        temp = 0x03;
-        break;
-      case '4' :
-        temp = 0x04;
-        break;
-      case '5' :
-        temp = 0x05;
-        break;
-      case '6' :
-        temp = 0x06;
-        break;
-      case '7' :
-        temp = 0x07;
-        break;
-      case '8' :
-        temp = 0x08;
-        break;
-      case '9' :
-        temp = 0x09;
-        break;
-      case 'A' :
-        temp = 0x0A;
-        break;
-      case 'B' :
-        temp = 0x0B;
-        break;
-      case 'C' :
-        temp = 0x0C;
-        break;
-      case 'D' :
-        temp = 0x0D;
-        break;
-      case 'E' :
-        temp = 0x0E;
-        break;
-      case 'F' :
-        temp = 0x0F;
-        break;
-    }
-    if ((i % 2) == 0) {
-      dataRec[i / 2] = temp;
-    } else {
-      dataRec[(i - 1) / 2] = ( dataRec[(i - 1) / 2] << 4) ^ temp;
-    }
-  }
-
-  // Dekripsi
-  cipher.decryptBlock(Decrypt, dataRec);
-
-  // Menampilkan data yang di dekripsi
-  char messageR[N];
-  Serial.print(nDataR);
-  Serial.print("\t");
-  nDataR++;
-  bool checkError = false;
-  for (int i = 0; i < N; i++) {
-    messageR[i] = char(Decrypt[i]);
-    if (int(messageR[i]) == 0) {
-    } else if ((int(messageR[i]) < 45) || (int (messageR[i] > 59))) {
-      checkError = true;
-    }
-  }
-
-  if (checkError) {
+    Serial.print(nDataR);
+    Serial.print("\t");
+    nDataR++;
     Serial.print("Message Error");
     Serial.print("\t\t\t");
     totError++;
+
   } else {
-    int i = 0;
-    while (messageR[i] != ';') {
-      if (messageR[i] == ':') {
-        Serial.print("\t\t");
-      } else {
-        Serial.print(char(messageR[i]));
+    // Setting Key
+    crypto_feed_watchdog();
+    cipher.setKey(key, cipher.keySize());
+
+    // Mengubah string dalam HEX format ke byte char[16]
+
+    byte dataRec[N];
+    byte temp;
+    for (int i = 0; i < 2 * N; i++) {
+      switch (message[i]) {
+        case '0' :
+          temp = 0x00;
+          break;
+        case '1' :
+          temp = 0x01;
+          break;
+        case '2' :
+          temp = 0x02;
+          break;
+        case '3' :
+          temp = 0x03;
+          break;
+        case '4' :
+          temp = 0x04;
+          break;
+        case '5' :
+          temp = 0x05;
+          break;
+        case '6' :
+          temp = 0x06;
+          break;
+        case '7' :
+          temp = 0x07;
+          break;
+        case '8' :
+          temp = 0x08;
+          break;
+        case '9' :
+          temp = 0x09;
+          break;
+        case 'A' :
+          temp = 0x0A;
+          break;
+        case 'B' :
+          temp = 0x0B;
+          break;
+        case 'C' :
+          temp = 0x0C;
+          break;
+        case 'D' :
+          temp = 0x0D;
+          break;
+        case 'E' :
+          temp = 0x0E;
+          break;
+        case 'F' :
+          temp = 0x0F;
+          break;
       }
-      i++;
+      if ((i % 2) == 0) {
+        dataRec[i / 2] = temp;
+      } else {
+        dataRec[(i - 1) / 2] = ( dataRec[(i - 1) / 2] << 4) ^ temp;
+      }
+    }
+
+    // Dekripsi
+    cipher.decryptBlock(Decrypt, dataRec);
+
+    // Menampilkan data yang di dekripsi
+    char messageR[N];
+    Serial.print(nDataR);
+    Serial.print("\t");
+    nDataR++;
+    bool checkError = false;
+    for (int i = 0; i < N; i++) {
+      messageR[i] = char(Decrypt[i]);
+      if (int(messageR[i]) == 0) {
+      } else if ((int(messageR[i]) < 45) || (int (messageR[i] > 59))) {
+        checkError = true;
+      }
+    }
+
+    if (checkError) {
+      Serial.print("Message Error");
+      Serial.print("\t\t\t");
+      totError++;
+    } else {
+      int i = 0;
+      while (messageR[i] != ';') {
+        if (messageR[i] == ':') {
+          Serial.print("\t\t");
+        } else {
+          Serial.print(char(messageR[i]));
+        }
+        i++;
+      }
     }
   }
+
   Serial.print("\t\t");
   Serial.print(totError);
   Serial.print("\t\t");
